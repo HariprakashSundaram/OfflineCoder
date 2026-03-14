@@ -1,0 +1,3 @@
+postman request POST 'http://localhost:8000/chat' \
+  --header 'Content-Type: application/json' \
+  --body '{"prompt":"write simple locust code with opencart.com"}'

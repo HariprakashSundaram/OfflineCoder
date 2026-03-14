@@ -1,0 +1,151 @@
+// Visualization Script
+// Visualization Script
+const template = `
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+    padding: 20px;
+    background-color: #f5f5f5;
+  }
+  .assistant-text {
+    background-color: #ffffff;
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+  .assistant-text h3 {
+    margin-top: 0;
+    color: #333;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 8px;
+  }
+  .assistant-text p {
+    color: #555;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+  }
+  .code-container {
+    position: relative;
+    background-color: #1e1e1e;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .code-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: #2d2d2d;
+    padding: 8px 16px;
+  }
+  .code-header span {
+    color: #888;
+    font-size: 12px;
+  }
+  .copy-btn {
+    background-color: #0066cc;
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: background-color 0.2s;
+  }
+  .copy-btn:hover {
+    background-color: #0052a3;
+  }
+  .copy-btn.copied {
+    background-color: #28a745;
+  }
+  .no-code {
+    color: #888;
+    font-style: italic;
+    padding: 16px;
+  }
+  pre {
+    margin: 0;
+    padding: 16px;
+    overflow-x: auto;
+  }
+  code {
+    color: #d4d4d4;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+  }
+</style>
+
+<div class="assistant-text">
+  <h3>Assistant Response</h3>
+  <p>{{displayText}}</p>
+</div>
+
+<div class="code-container">
+  <div class="code-header">
+    <span>Code Content</span>
+    {{#if hasCode}}
+    <button class="copy-btn" onclick="copyCode()">Copy</button>
+    {{/if}}
+  </div>
+  {{#if hasCode}}
+  <pre><code id="codeContent">{{codeText}}</code></pre>
+  {{else}}
+  <div class="no-code">No code block found</div>
+  {{/if}}
+</div>
+
+<script>
+  function copyCode() {
+    pm.getData(function (err, value) {
+      if (value && value.codeText) {
+        var textArea = document.createElement('textarea');
+        textArea.value = value.codeText;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        
+        var btn = document.querySelector('.copy-btn');
+        btn.textContent = 'Copied!';
+        btn.classList.add('copied');
+        setTimeout(function() {
+          btn.textContent = 'Copy';
+          btn.classList.remove('copied');
+        }, 2000);
+      }
+    });
+  }
+</script>
+`;
+
+function createPayload() {
+  var jsonData = pm.response.json();
+  var assistantText = jsonData.response || '';
+  
+  // Extract fenced code blocks using regex
+  var codeBlockRegex = /```[\s\S]*?```/g;
+  var matches = assistantText.match(codeBlockRegex);
+  var codeText = '';
+  
+  if (matches && matches.length > 0) {
+    // Process each code block: remove the ``` markers and optional language identifier
+    var codeBlocks = matches.map(function(block) {
+      // Remove opening ``` (with optional language) and closing ```
+      return block.replace(/^```[a-zA-Z]*\n?/, '').replace(/\n?```$/, '');
+    });
+    // Concatenate multiple code blocks with separator
+    codeText = codeBlocks.join('\n\n// --- Next Code Block ---\n\n');
+  }
+  
+  return {
+    displayText: assistantText,
+    codeText: codeText,
+    hasCode: codeText.length > 0
+  };
+}
+
+pm.visualizer.set(template, createPayload());
